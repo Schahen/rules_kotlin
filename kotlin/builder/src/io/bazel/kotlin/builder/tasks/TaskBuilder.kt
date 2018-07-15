@@ -18,8 +18,7 @@ package io.bazel.kotlin.builder.tasks
 import com.google.protobuf.util.JsonFormat
 import io.bazel.kotlin.builder.utils.ArgMap
 import io.bazel.kotlin.builder.utils.partitionSources
-import io.bazel.kotlin.model.KotlinModel
-import io.bazel.kotlin.model.KotlinModel.CompilationTask
+import io.bazel.kotlin.model.KotlinModel.*
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -28,8 +27,7 @@ class TaskBuilder @Inject internal constructor() {
     companion object {
         @JvmStatic
         private val jsonTypeRegistry = JsonFormat.TypeRegistry.newBuilder()
-            .add(KotlinModel.getDescriptor().messageTypes).build()
-
+            .add(getDescriptor().messageTypes).build()
 
         @JvmStatic
         private val jsonFormat: JsonFormat.Parser = JsonFormat.parser().usingTypeRegistry(jsonTypeRegistry)
@@ -73,8 +71,33 @@ class TaskBuilder @Inject internal constructor() {
         TEST_ONLY("--testonly")
     }
 
-    fun fromInput(argMap: ArgMap): CompilationTask =
-        CompilationTask.newBuilder().let { root ->
+    fun infoFromInput(argMap: ArgMap): CompilationTaskInfo =
+        with(CompilationTaskInfo.newBuilder()) {
+            label = argMap.mandatorySingle(io.bazel.kotlin.builder.tasks.TaskBuilder.JavaBuilderFlags.TARGET_LABEL.flag)
+            argMap.mandatorySingle(io.bazel.kotlin.builder.tasks.TaskBuilder.JavaBuilderFlags.RULE_KIND.flag).split("_").also {
+                kotlin.check(it.size == 3 && it[0] == "kt")
+                platform = kotlin.checkNotNull(Platform.valueOf(it[1].toUpperCase())) {
+                    "unrecognized platform ${it[1]}"
+                }
+                ruleKind = kotlin.checkNotNull(RuleKind.valueOf(it[2].toUpperCase())) {
+                    "unrecognized rule kind ${it[2]}"
+                }
+            }
+            moduleName = argMap.mandatorySingle("--kotlin_module_name").also {
+                kotlin.check(it.isNotBlank()) { "--kotlin_module_name should not be blank" }
+            }
+            passthroughFlags = argMap.optionalSingle("--kotlin_passthrough_flags")
+            argMap.optional("--kotlin_friend_paths")?.also { addAllFriendPaths(it) }
+            toolchainInfoBuilder.commonBuilder.apiVersion = argMap.mandatorySingle("--kotlin_api_version")
+            toolchainInfoBuilder.commonBuilder.languageVersion = argMap.mandatorySingle("--kotlin_language_version")
+            build()
+        }
+
+
+    fun buildJvm(info: CompilationTaskInfo, argMap: ArgMap): JvmCompilationTask =
+        JvmCompilationTask.newBuilder().let { root ->
+            root.info = info
+
             with(root.outputsBuilder) {
                 jar = argMap.mandatorySingle(JavaBuilderFlags.OUTPUT.flag)
                 jdeps = argMap.mandatorySingle("--output_jdeps")
@@ -103,32 +126,16 @@ class TaskBuilder @Inject internal constructor() {
             }
 
             with(root.infoBuilder) {
-                label = argMap.mandatorySingle(JavaBuilderFlags.TARGET_LABEL.flag)
-                argMap.mandatorySingle(JavaBuilderFlags.RULE_KIND.flag).split("_").also {
-                    check(it.size == 3 && it[0] == "kt")
-                    platform = checkNotNull(CompilationTask.Info.Platform.valueOf(it[1].toUpperCase())) {
-                        "unrecognized platform ${it[1]}"
-                    }
-                    ruleKind = checkNotNull(CompilationTask.Info.RuleKind.valueOf(it[2].toUpperCase())) {
-                        "unrecognized rule kind ${it[2]}"
-                    }
-                }
-                moduleName = argMap.mandatorySingle("--kotlin_module_name").also {
-                    check(it.isNotBlank()) { "--kotlin_module_name should not be blank" }
-                }
-                passthroughFlags = argMap.optionalSingle("--kotlin_passthrough_flags")
-                addAllFriendPaths(argMap.mandatory("--kotlin_friend_paths"))
-                toolchainInfoBuilder.commonBuilder.apiVersion = argMap.mandatorySingle("--kotlin_api_version")
-                toolchainInfoBuilder.commonBuilder.languageVersion = argMap.mandatorySingle("--kotlin_language_version")
                 toolchainInfoBuilder.jvmBuilder.jvmTarget = argMap.mandatorySingle("--kotlin_jvm_target")
 
                 argMap.optionalSingle("--kt-plugins")?.let { input ->
-                    plugins = KotlinModel.CompilerPlugins.newBuilder().let {
+                    plugins = CompilerPlugins.newBuilder().let {
                         jsonFormat.merge(input, it)
                         it.build()
                     }
                 }
             }
+
             root.build()
         }
 }

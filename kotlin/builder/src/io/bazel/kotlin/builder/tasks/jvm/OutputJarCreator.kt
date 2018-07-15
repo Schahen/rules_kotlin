@@ -24,7 +24,7 @@ import javax.inject.Singleton
 
 @Singleton
 internal class OutputJarCreator @Inject constructor() {
-    fun createOutputJar(command: KotlinModel.CompilationTask) {
+    fun createOutputJar(command: KotlinModel.JvmCompilationTask) {
         JarCreator(
             path = Paths.get(command.outputs.jar),
             normalize = true,

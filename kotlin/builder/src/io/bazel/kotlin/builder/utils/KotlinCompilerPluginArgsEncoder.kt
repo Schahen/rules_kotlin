@@ -86,7 +86,7 @@ class KotlinCompilerPluginArgsEncoder(
     }
 
     fun encode(
-        command: KotlinModel.CompilationTaskOrBuilder
+        command: KotlinModel.JvmCompilationTask
     ): List<String> {
         val javacArgs = mutableMapOf<String, String>(
             "-target" to command.info.toolchainInfo.jvm.jvmTarget

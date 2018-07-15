@@ -38,7 +38,7 @@ internal class JDepsGenerator  @Inject constructor(
 ) {
     private val isKotlinImplicit = JdepsParser.pathSuffixMatchingPredicate(
         toolchain.kotlinHome.resolveVerified("lib").toPath(), *toolchain.kotlinStandardLibraries.toTypedArray())
-    fun generateJDeps(command: KotlinModel.CompilationTask) {
+    fun generateJDeps(command: KotlinModel.JvmCompilationTask) {
         val jdepsContent =
             if (command.inputs.classpathList.isEmpty()) {
                 Deps.Dependencies.newBuilder().let {
