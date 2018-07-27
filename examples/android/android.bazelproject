@@ -1,0 +1,6 @@
+import .bazelproject
+
+targets:
+  //examples/android:android
+
+android_sdk_platform: android-27
