@@ -168,17 +168,15 @@ def _compile_action(ctx, rule_kind, module_name, friend_paths=depset(), src_jars
     deps = [
         d[JavaInfo]
         for d in (
-            toolchain.jvm_stdlibs +
             getattr(ctx.attr, "friends", []) +
             ctx.attr.deps
         )
-    ]
+    ] + [toolchain.stdlibs]
 
     runtime_deps = [
         d[JavaInfo]
         for d in (
-            ctx.attr.runtime_deps +
-            [toolchain.jvm_runtime]
+            ctx.attr.runtime_deps
         )
     ]
 
@@ -211,8 +209,8 @@ def _compile_action(ctx, rule_kind, module_name, friend_paths=depset(), src_jars
         compile_jar = ctx.outputs.jar,
         source_jar = ctx.outputs.srcjar,
 #        jdeps = ctx.outputs.jdeps,
-        deps = deps,
-        runtime_deps = runtime_deps,
+        deps = deps + [toolchain.stdlibs],
+        runtime_deps = runtime_deps + [toolchain.stdlibs],
         exports = exports,
         neverlink = getattr(ctx.attr, "neverlink", False)
     )

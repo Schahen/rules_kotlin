@@ -59,3 +59,10 @@ http_jar(
 load("//kotlin:kotlin.bzl", "kotlin_repositories", "kt_register_toolchains")
 kotlin_repositories()
 kt_register_toolchains()
+
+android_sdk_repository(
+    name = "androidsdk",
+    path = "/Users/hassan/Library/Android/sdk",
+    api_level = 27,
+    build_tools_version = "27.0.3"
+)
